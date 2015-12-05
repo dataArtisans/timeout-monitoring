@@ -39,7 +39,7 @@ public class LatencyWindowFunction implements Function<Tuple2<JSONObject, JSONOb
 		JSONObject first = jsonObjectJSONObjectTuple2.f0;
 		JSONObject last = jsonObjectJSONObjectTuple2.f1;
 
-		JSONObject result = new JSONObject(first, resultFields);
+		JSONObject result = JSONObjectExtractor.createJSONObject(first, resultFields);
 
 		String firstTimestamp = first.getString("timestamp");
 		String lastTimestamp = last.getString("timestamp");

@@ -39,9 +39,9 @@ public class TimeoutMonitoring {
 
 			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-			final String[] inputKeys = {"_context_request_id", "timestamp", "event_type", "publisher_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
+			final String[] inputKeys = {"_context_request_id", "payload:instance_type_id", "timestamp", "event_type", "publisher_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
 			final String key = "_context_request_id";
-			final String[] resultFields = {"_context_request_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
+			final String[] resultFields = {"_context_request_id", "payload:instance_type_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
 
 			DataStream<String> input = env.readTextFile(filePath);
 			DataStream<JSONObject> jsonObjects = input.map(new MapFunction<String, JSONObject>() {

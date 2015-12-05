@@ -50,7 +50,7 @@ public class JSONSessionMonitoring {
 		DataStream<JSONObject> filteredInput = input.map(new MapFunction<JSONObject, JSONObject>() {
 			@Override
 			public JSONObject map(JSONObject jsonObject) throws Exception {
-				return new JSONObject(jsonObject, inputKeys);
+				return JSONObjectExtractor.createJSONObject(jsonObject, inputKeys);
 			}
 		});
 
