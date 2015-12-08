@@ -74,7 +74,8 @@ public class TimeoutMonitoring {
 				timestampExtractor,
 				delay,
 				sessionTimeout, // session timeout
-				new LatencyWindowFunction(resultFields) // create the latency from the first and last element of the session
+				new LatencyWindowFunction(resultFields), // create the latency from the first and last element of the session
+				new LatencyTimeoutFunction(resultFields, sessionTimeout)
 			);
 
 			result.print();

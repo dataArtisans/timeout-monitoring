@@ -19,7 +19,6 @@
 package com.dataartisans.timeoutmonitoring;
 
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
@@ -36,20 +35,22 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 	private final Function<IN, Boolean> isSessionStart;
 	private final Function<IN, Boolean> isSessionEnd;
 	private final Function<IN, Long> timestampExtractor;
-	private final Function<Tuple2<IN, IN>, OUT> windowFunction;
+	private final Function2<IN, IN, OUT> windowFunction;
+	private final Function<IN, OUT> timeoutFunction;
 	private final TypeInformation<OUT> outTypeInformation;
 
 	public SessionWindowFunction(
 		Function<IN, Boolean> isSessionStart,
 		Function<IN, Boolean> isSessionEnd,
 		Function<IN, Long> timestampExtractor,
-		Function<Tuple2<IN, IN>, OUT> windowFunction,
+		Function2<IN, IN, OUT> windowFunction,
+		Function<IN, OUT> timeoutFunction,
 		Class<OUT> outClass) {
 		this.isSessionStart = isSessionStart;
 		this.isSessionEnd = isSessionEnd;
 		this.timestampExtractor = timestampExtractor;
 		this.windowFunction = windowFunction;
-
+		this.timeoutFunction = timeoutFunction;
 
 		outTypeInformation = TypeExtractor.getForClass(outClass);
 	}
@@ -78,16 +79,15 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 			}
 		}
 
-		if (!lastEvent.equals(firstEvent)) {
-			if (isSessionStart.apply(firstEvent) && isSessionEnd.apply(lastEvent)) {
-				collector.collect(windowFunction.apply(Tuple2.of(firstEvent, lastEvent)));
+		if (isSessionStart.apply(firstEvent)) {
+			if (isSessionEnd.apply(lastEvent)) {
+				collector.collect(windowFunction.apply(firstEvent, lastEvent));
 			} else {
-				LOG.info("The window does not contain the session end element. This indicates that " +
-						"the window has been triggered by the timeout." + firstEvent);
+				collector.collect(timeoutFunction.apply(firstEvent));
 			}
 		} else {
-			LOG.info("The window does not contain the session end element. This indicates that " +
-					"the window has been triggered by the timeout." + firstEvent);
+			LOG.info("The window does not contain the session start element. This indicates" +
+					"missing data.");
 		}
 	}
 

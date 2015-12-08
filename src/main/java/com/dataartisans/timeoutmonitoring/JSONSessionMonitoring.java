@@ -50,7 +50,8 @@ public class JSONSessionMonitoring {
 		final Function<JSONObject, Long> timestampExtractor,
 		final long eventDelay,
 		final long timeout,
-		Function<Tuple2<JSONObject, JSONObject>, JSONObject> windowFunction) {
+		Function2<JSONObject, JSONObject, JSONObject> windowFunction,
+		Function<JSONObject, JSONObject> timeoutFunction) {
 
 		DataStream<JSONObject> filteredInput = input.map(new MapFunction<JSONObject, JSONObject>() {
 			@Override
@@ -79,6 +80,7 @@ public class JSONSessionMonitoring {
 				isSessionEnd,
 				timestampExtractor,
 				windowFunction,
+				timeoutFunction,
 				JSONObject.class
 			));
 	}

@@ -56,6 +56,7 @@ public class TimeoutMonitoringTest {
 		final String[] inputKeys = {"_context_request_id", "timestamp", "event_type", "publisher_id", "_context_user_name"};
 		final String key = "_context_request_id";
 		final String[] resultFields = {"_context_request_id", "_context_user_name"};
+		long timeout = 1500;
 
 		DataStream<String> input = env.addSource(new SequentialCollectionSource<String>(inputData)).returns(String.class);
 		DataStream<JSONObject> jsonObjects = input.map(new MapFunction<String, JSONObject>() {
@@ -76,8 +77,9 @@ public class TimeoutMonitoringTest {
 				new JSONObjectPredicateEquals<>("event_type", "compute.instance.create.end"), // session end element
 				timestampExtractor,
 				0,
-				1500, // timeout of 1000 milliseconds
-				new LatencyWindowFunction(resultFields) // create the latency from the first and last element of the session
+				timeout, // timeout of 1000 milliseconds
+				new LatencyWindowFunction(resultFields), // create the latency from the first and last element of the session,
+				new LatencyTimeoutFunction(resultFields, timeout)
 		);
 
 		result.print();

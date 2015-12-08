@@ -18,7 +18,6 @@
 
 package com.dataartisans.timeoutmonitoring;
 
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.format.DateTimeFormat;
@@ -26,7 +25,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.json.JSONObject;
 import scala.Serializable;
 
-public class LatencyWindowFunction implements Function<Tuple2<JSONObject, JSONObject>, JSONObject>, Serializable {
+public class LatencyWindowFunction implements Function2<JSONObject, JSONObject, JSONObject>, Serializable {
 
 	private final String[] resultFields;
 
@@ -35,14 +34,12 @@ public class LatencyWindowFunction implements Function<Tuple2<JSONObject, JSONOb
 	}
 
 	@Override
-	public JSONObject apply(Tuple2<JSONObject, JSONObject> jsonObjectJSONObjectTuple2) {
-		JSONObject first = jsonObjectJSONObjectTuple2.f0;
-		JSONObject last = jsonObjectJSONObjectTuple2.f1;
+	public JSONObject apply(JSONObject left, JSONObject right) {
 
-		JSONObject result = JSONObjectExtractor.createJSONObject(first, resultFields);
+		JSONObject result = JSONObjectExtractor.createJSONObject(left, resultFields);
 
-		String firstTimestamp = first.getString("timestamp");
-		String lastTimestamp = last.getString("timestamp");
+		String firstTimestamp = left.getString("timestamp");
+		String lastTimestamp = right.getString("timestamp");
 
 		DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
 		DateTime firstDateTime = formatter.parseDateTime(firstTimestamp);
