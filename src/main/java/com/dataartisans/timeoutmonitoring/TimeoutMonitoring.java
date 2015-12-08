@@ -18,8 +18,10 @@
 
 package com.dataartisans.timeoutmonitoring;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.json.JSONObject;
@@ -32,16 +34,27 @@ public class TimeoutMonitoring {
 		ParameterTool params = ParameterTool.fromArgs(args);
 
 		String filePath = params.get("filePath");
+		String delayStr = params.get("eventDelay");
+		String sessionTimeoutStr = params.get("sessionTimeout");
 
-		if (filePath == null) {
-			System.out.println("Job requires the --filePath option to be specified.");
+		if (filePath == null || delayStr == null || sessionTimeoutStr == null) {
+			System.out.println("Job requires the --filePath, --sessionTimeout and --eventDelay option to be specified.");
 		} else {
-
+			int delay = Integer.parseInt(delayStr);
+			int sessionTimeout = Integer.parseInt(sessionTimeoutStr);
 			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+			env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+
+			env.setParallelism(2);
+
+			ExecutionConfig config = env.getConfig();
+
+			config.enableTimestamps();
 
 			final String[] inputKeys = {"_context_request_id", "payload:instance_type_id", "timestamp", "event_type", "publisher_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
 			final String key = "_context_request_id";
-			final String[] resultFields = {"_context_request_id", "payload:instance_type_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
+			final String[] resultFields = {"_context_request_id"};
 
 			DataStream<String> input = env.readTextFile(filePath);
 			DataStream<JSONObject> jsonObjects = input.map(new MapFunction<String, JSONObject>() {
@@ -51,6 +64,8 @@ public class TimeoutMonitoring {
 				}
 			});
 
+			Function<JSONObject, Long> timestampExtractor = new TimestampExtractorFunction("timestamp", "yyyy-MM-dd HH:mm:ss.SSSSSS");
+
 			@SuppressWarnings("unchecked")
 			DataStream<JSONObject> result = JSONSessionMonitoring.createSessionMonitoring(
 				jsonObjects, // input data set
@@ -58,7 +73,9 @@ public class TimeoutMonitoring {
 				key, // key to group on
 				new JSONObjectPredicateRegex("publisher_id", Pattern.compile("api.*novactl.*")), // session start element
 				new JSONObjectPredicateEquals<>("event_type", "compute.instance.create.end"), // session end element
-				20000, // timeout of 20000 milliseconds
+				timestampExtractor,
+				delay,
+				sessionTimeout, // session timeout
 				new LatencyWindowFunction(resultFields) // create the latency from the first and last element of the session
 			);
 

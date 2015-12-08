@@ -53,5 +53,5 @@ public class LatencyWindowFunction implements Function<Tuple2<JSONObject, JSONOb
 		result.put("latency", diff.getMillis() + "");
 
 		return result;
-		}
+	}
 }

@@ -17,7 +17,9 @@
 
 package com.dataartisans.timeoutmonitoring;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
@@ -35,13 +37,21 @@ public class TimeoutMonitoringTest {
 	public void testTimeoutMonitoring() throws Exception {
 		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
+		env.setParallelism(1);
+
+		env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+		ExecutionConfig config = env.getConfig();
+
+		config.enableTimestamps();
+
 		List<String> inputData = new ArrayList<>();
 
 		inputData.add("{\"_context_request_id\": \"foo\", \"timestamp\": \"1987-09-30 12:56:12.123456\", \"event_type\": \"bar\", \"publisher_id\": \"api.foobar.novactl.asf\", \"_context_user_name\": \"foobar\"}");
 		inputData.add("{\"_context_request_id\": \"foo\", \"timestamp\": \"1987-09-30 12:56:12.523456\", \"event_type\": \"bar\", \"publisher_id\": \"api.foobar.intermediate.asf\", \"_context_user_name\": \"foobar\"}");
 		inputData.add("{\"_context_request_id\": \"foo\", \"timestamp\": \"1987-09-30 12:56:13.123456\", \"event_type\": \"compute.instance.create.end\", \"publisher_id\": \"api.foobar.barfoo.asf\", \"_context_user_name\": \"foobar\"}");
-		inputData.add("{\"_context_request_id\": \"foobar\", \"timestamp\": \"1987-09-30 12:56:12.123456\", \"event_type\": \"bar\", \"publisher_id\": \"api.foobar.novactl.asf\", \"_context_user_name\": \"foobar\"}");
-		inputData.add("{\"_context_request_id\": \"foobar\", \"timestamp\": \"1987-09-30 12:56:13.123456\", \"event_type\": \"compute.instance.create.end\", \"publisher_id\": \"api.foobar.barfoo.asf\", \"_context_user_name\": \"foobar\"}");
+		inputData.add("{\"_context_request_id\": \"foobar\", \"timestamp\": \"1987-09-30 12:56:14.123456\", \"event_type\": \"bar\", \"publisher_id\": \"api.foobar.novactl.asf\", \"_context_user_name\": \"foobar\"}");
+		inputData.add("{\"_context_request_id\": \"foobar\", \"timestamp\": \"1987-09-30 12:56:15.523456\", \"event_type\": \"bar\", \"publisher_id\": \"api.foobar.intermediate.asf\", \"_context_user_name\": \"foobar\"}");
+		inputData.add("{\"_context_request_id\": \"foobar\", \"timestamp\": \"1987-09-30 12:56:16.123456\", \"event_type\": \"compute.instance.create.end\", \"publisher_id\": \"api.foobar.barfoo.asf\", \"_context_user_name\": \"foobar\"}");
 
 		final String[] inputKeys = {"_context_request_id", "timestamp", "event_type", "publisher_id", "_context_user_name"};
 		final String key = "_context_request_id";
@@ -55,6 +65,8 @@ public class TimeoutMonitoringTest {
 			}
 		});
 
+		Function<JSONObject, Long> timestampExtractor = new TimestampExtractorFunction("timestamp", "yyyy-MM-dd HH:mm:ss.SSSSSS");
+
 		@SuppressWarnings("unchecked")
 		DataStream<JSONObject> result = JSONSessionMonitoring.createSessionMonitoring(
 				jsonObjects, // input data set
@@ -62,7 +74,9 @@ public class TimeoutMonitoringTest {
 				key, // key to group on
 				new JSONObjectPredicateRegex("publisher_id", Pattern.compile("api.*novactl.*")), // session start element
 				new JSONObjectPredicateEquals<>("event_type", "compute.instance.create.end"), // session end element
-				1000, // timeout of 1000 milliseconds
+				timestampExtractor,
+				0,
+				1500, // timeout of 1000 milliseconds
 				new LatencyWindowFunction(resultFields) // create the latency from the first and last element of the session
 		);
 

@@ -22,6 +22,7 @@ import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.functions.TimestampExtractor;
 import org.json.JSONObject;
 
 public class JSONSessionMonitoring {
@@ -34,6 +35,8 @@ public class JSONSessionMonitoring {
 	 * @param key JSONObject key field to group on
 	 * @param isSessionStart JSONObjectPredicate function which detects the session starting elements
 	 * @param isSessionEnd JSONObjectPredicate function which detects the session ending elements
+	 * @param timestampExtractor Function which extracts the timestamp from the JSONObject
+	 * @param eventDelay Maximum event delay, important for the watermark generation
 	 * @param timeout Timeout after which the session will be discarded
 	 * @param windowFunction Function which is called with the session start and end element
 	 * @return DataStream of JSONObjects which are produced by the windowFunction
@@ -44,6 +47,8 @@ public class JSONSessionMonitoring {
 		final String key,
 		final JSONObjectPredicate<?> isSessionStart,
 		final JSONObjectPredicate<?> isSessionEnd,
+		final Function<JSONObject, Long> timestampExtractor,
+		final long eventDelay,
 		final long timeout,
 		Function<Tuple2<JSONObject, JSONObject>, JSONObject> windowFunction) {
 
@@ -52,7 +57,7 @@ public class JSONSessionMonitoring {
 			public JSONObject map(JSONObject jsonObject) throws Exception {
 				return JSONObjectExtractor.createJSONObject(jsonObject, inputKeys);
 			}
-		});
+		}).assignTimestamps(new JSONObjectTimestampExtractor(timestampExtractor, eventDelay));
 
 		return filteredInput
 			.keyBy(new KeySelector<JSONObject, Object>() {
@@ -72,6 +77,7 @@ public class JSONSessionMonitoring {
 			.apply(new SessionWindowFunction<>(
 				isSessionStart,
 				isSessionEnd,
+				timestampExtractor,
 				windowFunction,
 				JSONObject.class
 			));

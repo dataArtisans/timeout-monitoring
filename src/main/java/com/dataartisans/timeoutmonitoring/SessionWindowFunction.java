@@ -35,17 +35,21 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 
 	private final Function<IN, Boolean> isSessionStart;
 	private final Function<IN, Boolean> isSessionEnd;
+	private final Function<IN, Long> timestampExtractor;
 	private final Function<Tuple2<IN, IN>, OUT> windowFunction;
 	private final TypeInformation<OUT> outTypeInformation;
 
 	public SessionWindowFunction(
 		Function<IN, Boolean> isSessionStart,
 		Function<IN, Boolean> isSessionEnd,
+		Function<IN, Long> timestampExtractor,
 		Function<Tuple2<IN, IN>, OUT> windowFunction,
 		Class<OUT> outClass) {
 		this.isSessionStart = isSessionStart;
 		this.isSessionEnd = isSessionEnd;
+		this.timestampExtractor = timestampExtractor;
 		this.windowFunction = windowFunction;
+
 
 		outTypeInformation = TypeExtractor.getForClass(outClass);
 	}
@@ -54,23 +58,36 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 	public void apply(KEY key, GlobalWindow globalWindow, Iterable<IN> iterable, Collector<OUT> collector) throws Exception {
 		Iterator<IN> iterator = iterable.iterator();
 
-		IN first = iterator.next();
-		IN last = null;
+		IN firstEvent = iterator.next();
+		long firstTimestamp = timestampExtractor.apply(firstEvent);
+		IN lastEvent = firstEvent;
+		long lastTimestamp = timestampExtractor.apply(lastEvent);
 
 		while (iterator.hasNext()) {
-			last = iterator.next();
+			IN event = iterator.next();
+			long eventTimestamp = timestampExtractor.apply(event);
+
+			if (eventTimestamp < firstTimestamp) {
+				firstEvent = event;
+				firstTimestamp = eventTimestamp;
+			}
+
+			if (eventTimestamp > lastTimestamp) {
+				lastEvent = event;
+				lastTimestamp = eventTimestamp;
+			}
 		}
 
-		if (last != null) {
-			if (isSessionStart.apply(first) && isSessionEnd.apply(last)) {
-				collector.collect(windowFunction.apply(Tuple2.of(first, last)));
+		if (!lastEvent.equals(firstEvent)) {
+			if (isSessionStart.apply(firstEvent) && isSessionEnd.apply(lastEvent)) {
+				collector.collect(windowFunction.apply(Tuple2.of(firstEvent, lastEvent)));
 			} else {
 				LOG.info("The window does not contain the session end element. This indicates that " +
-						"the window has been triggered by the timeout.");
+						"the window has been triggered by the timeout." + firstEvent);
 			}
 		} else {
 			LOG.info("The window does not contain the session end element. This indicates that " +
-					"the window has been triggered by the timeout.");
+					"the window has been triggered by the timeout." + firstEvent);
 		}
 	}
 

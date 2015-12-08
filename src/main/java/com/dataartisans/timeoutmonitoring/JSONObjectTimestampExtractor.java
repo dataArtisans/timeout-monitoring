@@ -18,8 +18,37 @@
 
 package com.dataartisans.timeoutmonitoring;
 
+import org.apache.flink.streaming.api.functions.TimestampExtractor;
+import org.json.JSONObject;
+
 import java.io.Serializable;
 
-public interface Function<T, R> extends Serializable {
-	R apply(T t);
+public class JSONObjectTimestampExtractor implements TimestampExtractor<JSONObject>, Serializable {
+
+	private final Function<JSONObject, Long> timestampExtractor;
+	private final long delay;
+
+	private long currentWatermark = Long.MIN_VALUE;
+
+	public JSONObjectTimestampExtractor(Function<JSONObject, Long> timestampExtractor, long delay) {
+		this.timestampExtractor = timestampExtractor;
+		this.delay = delay;
+	}
+
+	@Override
+	public long extractTimestamp(JSONObject jsonObject, long l) {
+		return timestampExtractor.apply(jsonObject);
+	}
+
+	@Override
+	public long extractWatermark(JSONObject jsonObject, long l) {
+		currentWatermark = extractTimestamp(jsonObject, l) - delay;
+
+		return currentWatermark;
+	}
+
+	@Override
+	public long getCurrentWatermark() {
+		return currentWatermark;
+	}
 }

@@ -21,8 +21,19 @@ package com.dataartisans.timeoutmonitoring;
 import org.apache.flink.api.common.state.OperatorState;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SessionTrigger<T> implements Trigger<T, GlobalWindow> {
+
+	private enum WindowState {
+		EMPTY,
+		START_ELEMENT,
+		END_ELEMENT
+	}
+
+	private static final Logger LOG = LoggerFactory.getLogger(SessionTrigger.class);
 
 	private final Function<T, Boolean> isSessionStart;
 	private final Function<T, Boolean> isSessionEnd;
@@ -39,18 +50,34 @@ public class SessionTrigger<T> implements Trigger<T, GlobalWindow> {
 
 	@Override
 	public TriggerResult onElement(T record, long timestamp, GlobalWindow globalWindow, TriggerContext triggerContext) throws Exception {
-		OperatorState<Boolean> windowStarted = triggerContext.getKeyValueState("windowStarted", false);
+		OperatorState<WindowState> windowState = triggerContext.getKeyValueState("windowState", WindowState.EMPTY);
 
-		if (isSessionStart.apply(record) && !windowStarted.value()) {
-			windowStarted.update(true);
-			triggerContext.registerProcessingTimeTimer(timestamp + timeout);
+		JSONObject object = (JSONObject) record;
 
-			return TriggerResult.CONTINUE;
+		if (isSessionStart.apply(record)) {
+			if (windowState.value() == WindowState.EMPTY) {
+				windowState.update(WindowState.START_ELEMENT);
+
+				triggerContext.registerEventTimeTimer(timestamp + timeout);
+
+				return TriggerResult.CONTINUE;
+			} else if (windowState.value() == WindowState.END_ELEMENT) {
+				return TriggerResult.CONTINUE;
+			} else {
+				LOG.info("Received another start element for the same session.");
+				return TriggerResult.CONTINUE;
+			}
 		} else if (isSessionEnd.apply(record)) {
-			if (windowStarted.value()) {
+			if (windowState.value() == WindowState.EMPTY) {
+				windowState.update(WindowState.END_ELEMENT);
+
+				triggerContext.registerEventTimeTimer(timestamp);
+				return TriggerResult.CONTINUE;
+			} else if (windowState.value() == WindowState.START_ELEMENT) {
 				return TriggerResult.FIRE_AND_PURGE;
 			} else {
-				return TriggerResult.PURGE;
+				LOG.info("Received another end element for the same session.");
+				return TriggerResult.CONTINUE;
 			}
 		} else {
 			return TriggerResult.CONTINUE;
@@ -59,11 +86,11 @@ public class SessionTrigger<T> implements Trigger<T, GlobalWindow> {
 
 	@Override
 	public TriggerResult onProcessingTime(long l, GlobalWindow globalWindow, TriggerContext triggerContext) throws Exception {
-		return TriggerResult.FIRE_AND_PURGE;
+		throw new UnsupportedOperationException("This trigger does not work with on processing time.");
 	}
 
 	@Override
 	public TriggerResult onEventTime(long l, GlobalWindow globalWindow, TriggerContext triggerContext) throws Exception {
-		throw new UnsupportedOperationException("This trigger does not work with event time.");
+		return TriggerResult.FIRE_AND_PURGE;
 	}
 }
