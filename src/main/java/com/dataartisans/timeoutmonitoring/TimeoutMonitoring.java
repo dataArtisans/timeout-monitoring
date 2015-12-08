@@ -46,8 +46,6 @@ public class TimeoutMonitoring {
 
 			env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-			env.setParallelism(2);
-
 			ExecutionConfig config = env.getConfig();
 
 			config.enableTimestamps();
