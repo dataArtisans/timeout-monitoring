@@ -37,6 +37,7 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 	private final Function<IN, Long> timestampExtractor;
 	private final Function2<IN, IN, OUT> windowFunction;
 	private final Function<IN, OUT> timeoutFunction;
+	private final long timeout;
 	private final TypeInformation<OUT> outTypeInformation;
 
 	public SessionWindowFunction(
@@ -45,12 +46,14 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 		Function<IN, Long> timestampExtractor,
 		Function2<IN, IN, OUT> windowFunction,
 		Function<IN, OUT> timeoutFunction,
+		long timeout,
 		Class<OUT> outClass) {
 		this.isSessionStart = isSessionStart;
 		this.isSessionEnd = isSessionEnd;
 		this.timestampExtractor = timestampExtractor;
 		this.windowFunction = windowFunction;
 		this.timeoutFunction = timeoutFunction;
+		this.timeout = timeout;
 
 		outTypeInformation = TypeExtractor.getForClass(outClass);
 	}
@@ -80,10 +83,10 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 		}
 
 		if (isSessionStart.apply(firstEvent)) {
-			if (isSessionEnd.apply(lastEvent)) {
-				collector.collect(windowFunction.apply(firstEvent, lastEvent));
-			} else {
+			if (!isSessionEnd.apply(lastEvent) || lastTimestamp - firstTimestamp > timeout) {
 				collector.collect(timeoutFunction.apply(firstEvent));
+			} else {
+				collector.collect(windowFunction.apply(firstEvent, lastEvent));
 			}
 		} else {
 			LOG.info("The window does not contain the session start element. This indicates" +

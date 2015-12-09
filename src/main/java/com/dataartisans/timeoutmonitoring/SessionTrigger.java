@@ -21,7 +21,6 @@ package com.dataartisans.timeoutmonitoring;
 import org.apache.flink.api.common.state.OperatorState;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,8 +50,6 @@ public class SessionTrigger<T> implements Trigger<T, GlobalWindow> {
 	@Override
 	public TriggerResult onElement(T record, long timestamp, GlobalWindow globalWindow, TriggerContext triggerContext) throws Exception {
 		OperatorState<WindowState> windowState = triggerContext.getKeyValueState("windowState", WindowState.EMPTY);
-
-		JSONObject object = (JSONObject) record;
 
 		if (isSessionStart.apply(record)) {
 			if (windowState.value() == WindowState.EMPTY) {

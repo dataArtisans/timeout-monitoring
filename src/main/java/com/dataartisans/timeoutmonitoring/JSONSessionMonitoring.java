@@ -81,6 +81,7 @@ public class JSONSessionMonitoring {
 				timestampExtractor,
 				windowFunction,
 				timeoutFunction,
+				timeout,
 				JSONObject.class
 			));
 	}
