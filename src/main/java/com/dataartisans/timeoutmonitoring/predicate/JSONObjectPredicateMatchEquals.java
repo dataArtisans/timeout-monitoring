@@ -16,28 +16,22 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.predicate;
 
-import org.json.JSONObject;
+public class JSONObjectPredicateMatchEquals<T> extends JSONObjectPredicateMatch<T> {
+	private final T value;
 
-import java.io.Serializable;
-
-public abstract class JSONObjectPredicate<T> implements Function<JSONObject, Boolean>, Serializable {
-	private final String key;
-
-	public JSONObjectPredicate(
-		String key) {
-		this.key = key;
+	public JSONObjectPredicateMatchEquals(String key, T value) {
+		super(key);
+		this.value = value;
 	}
 
-	public abstract boolean match(T element);
-
 	@Override
-	public Boolean apply(JSONObject jsonObject) {
-		if (jsonObject.has(key)) {
-			return match((T)jsonObject.get(key));
+	public boolean match(T element) {
+		if (element == null) {
+			return value == null;
 		} else {
-			return false;
+			return element.equals(value);
 		}
 	}
 }

@@ -18,11 +18,11 @@
 
 package com.dataartisans.timeoutmonitoring;
 
+import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicate;
+import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatch;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.functions.KeySelector;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.functions.TimestampExtractor;
 import org.json.JSONObject;
 
 public class JSONSessionMonitoring {
@@ -33,8 +33,8 @@ public class JSONSessionMonitoring {
 	 * @param input DataStream of JSONObjects to be used as the input
 	 * @param inputKeys Array of keys which are kept from the original JSONObject input
 	 * @param key JSONObject key field to group on
-	 * @param isSessionStart JSONObjectPredicate function which detects the session starting elements
-	 * @param isSessionEnd JSONObjectPredicate function which detects the session ending elements
+	 * @param isSessionStart JSONObjectPredicateMatch function which detects the session starting elements
+	 * @param isSessionEnd JSONObjectPredicateMatch function which detects the session ending elements
 	 * @param timestampExtractor Function which extracts the timestamp from the JSONObject
 	 * @param eventDelay Maximum event delay, important for the watermark generation
 	 * @param timeout Timeout after which the session will be discarded
@@ -45,8 +45,8 @@ public class JSONSessionMonitoring {
 		DataStream<JSONObject> input,
 		final String[] inputKeys,
 		final String key,
-		final JSONObjectPredicate<?> isSessionStart,
-		final JSONObjectPredicate<?> isSessionEnd,
+		final JSONObjectPredicate isSessionStart,
+		final JSONObjectPredicate isSessionEnd,
 		final Function<JSONObject, Long> timestampExtractor,
 		final long eventDelay,
 		final long timeout,

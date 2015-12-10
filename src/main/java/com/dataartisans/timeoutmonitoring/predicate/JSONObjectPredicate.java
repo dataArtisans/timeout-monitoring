@@ -16,27 +16,12 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.predicate;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.dataartisans.timeoutmonitoring.Function;
+import org.json.JSONObject;
 
-public class JSONObjectPredicateRegex extends JSONObjectPredicate<String> {
+import java.io.Serializable;
 
-	private final Pattern pattern;
-
-	public JSONObjectPredicateRegex(String key, Pattern pattern) {
-		super(key);
-		this.pattern = pattern;
-	}
-
-	@Override
-	public boolean match(String element) {
-		if (element == null) {
-			return false;
-		} else {
-			Matcher matcher = pattern.matcher(element);
-			return matcher.matches();
-		}
-	}
+public interface JSONObjectPredicate extends Function<JSONObject, Boolean>, Serializable {
 }

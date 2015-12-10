@@ -18,6 +18,9 @@
 
 package com.dataartisans.timeoutmonitoring;
 
+import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateAnd;
+import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchEquals;
+import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchRegex;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.utils.ParameterTool;
@@ -69,8 +72,10 @@ public class TimeoutMonitoring {
 				jsonObjects, // input data set
 				inputKeys, // json elements to keep from the input
 				key, // key to group on
-				new JSONObjectPredicateRegex("publisher_id", Pattern.compile("api.*novactl.*")), // session start element
-				new JSONObjectPredicateEquals<>("event_type", "compute.instance.create.end"), // session end element
+				new JSONObjectPredicateAnd( // session start element
+					new JSONObjectPredicateMatchRegex("publisher_id", Pattern.compile("api.*novactl.*")),
+					new JSONObjectPredicateMatchEquals<>("event_type", "compute.instance.update")),
+				new JSONObjectPredicateMatchEquals<>("event_type", "compute.instance.create.end"), // session end element
 				timestampExtractor,
 				delay,
 				sessionTimeout, // session timeout

@@ -16,22 +16,27 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.predicate;
 
-public class JSONObjectPredicateEquals<T> extends JSONObjectPredicate<T> {
-	private final T value;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-	public JSONObjectPredicateEquals(String key, T value) {
+public class JSONObjectPredicateMatchRegex extends JSONObjectPredicateMatch<String> {
+
+	private final Pattern pattern;
+
+	public JSONObjectPredicateMatchRegex(String key, Pattern pattern) {
 		super(key);
-		this.value = value;
+		this.pattern = pattern;
 	}
 
 	@Override
-	public boolean match(T element) {
+	public boolean match(String element) {
 		if (element == null) {
-			return value == null;
+			return false;
 		} else {
-			return element.equals(value);
+			Matcher matcher = pattern.matcher(element);
+			return matcher.matches();
 		}
 	}
 }
