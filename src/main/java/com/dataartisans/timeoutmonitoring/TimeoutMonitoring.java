@@ -18,11 +18,18 @@
 
 package com.dataartisans.timeoutmonitoring;
 
+import com.dataartisans.timeoutmonitoring.alert.AlertWindowOperator;
+import com.dataartisans.timeoutmonitoring.alert.JSONObjectAlertFunction;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateAnd;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchEquals;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchRegex;
+import com.dataartisans.timeoutmonitoring.session.LatencyTimeoutFunction;
+import com.dataartisans.timeoutmonitoring.session.LatencyWindowFunction;
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -48,6 +55,7 @@ public class TimeoutMonitoring {
 			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
 			env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+			env.setParallelism(1);
 
 			ExecutionConfig config = env.getConfig();
 
@@ -55,7 +63,12 @@ public class TimeoutMonitoring {
 
 			final String[] inputKeys = {"_context_request_id", "payload:instance_type_id", "timestamp", "event_type", "publisher_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
 			final String key = "_context_request_id";
-			final String[] resultFields = {"_context_request_id"};
+			final String[] resultFields = {"_context_request_id", "timestamp"};
+			final String errorKey = "event_type";
+			final String errorRegex = "trove.+error";
+			final String timestampPattern = "yyyy-MM-dd HH:mm:ss.SSSSSS";
+
+			final Pattern errorPattern = Pattern.compile(errorRegex);
 
 			DataStream<String> input = env.readTextFile(filePath);
 			DataStream<JSONObject> jsonObjects = input.map(new MapFunction<String, JSONObject>() {
@@ -65,10 +78,10 @@ public class TimeoutMonitoring {
 				}
 			});
 
-			Function<JSONObject, Long> timestampExtractor = new TimestampExtractorFunction("timestamp", "yyyy-MM-dd HH:mm:ss.SSSSSS");
+			Function<JSONObject, Long> timestampExtractor = new TimestampExtractorFunction("timestamp", timestampPattern);
 
 			@SuppressWarnings("unchecked")
-			DataStream<JSONObject> result = JSONSessionMonitoring.createSessionMonitoring(
+			DataStream<JSONObject> sessionMonitoring = JSONSessionMonitoring.createSessionMonitoring(
 				jsonObjects, // input data set
 				inputKeys, // json elements to keep from the input
 				key, // key to group on
@@ -83,7 +96,40 @@ public class TimeoutMonitoring {
 				new LatencyTimeoutFunction(resultFields, sessionTimeout)
 			);
 
-			result.print();
+			TypeInformation<JSONObject> jsonObjectTypeInformation = TypeExtractor.getForClass(JSONObject.class);
+
+			DataStream<JSONObject> sessionAlerts = sessionMonitoring.filter(new FilterFunction<JSONObject>() {
+				@Override
+				public boolean filter(JSONObject jsonObject) throws Exception {
+					return jsonObject.has("sessionTimeout");
+				}
+			}).transform(
+					"SessionAlerts",
+					jsonObjectTypeInformation,
+					new AlertWindowOperator<JSONObject, JSONObject>(
+							5,
+							1000 * 5 * 3600,
+							new JSONObjectAlertFunction("timestamp", timestampPattern)
+					)
+			).setParallelism(1);;
+
+			DataStream<JSONObject> troveAlerts = jsonObjects.filter(new FilterFunction<JSONObject>() {
+				@Override
+				public boolean filter(JSONObject jsonObject) throws Exception {
+					return errorPattern.matcher(jsonObject.optString(errorKey)).matches();
+				}
+			}).transform(
+					"TroveAlerts",
+					jsonObjectTypeInformation,
+					new AlertWindowOperator<JSONObject, JSONObject>(
+							5,
+							300000,
+							new JSONObjectAlertFunction("timestamp", timestampPattern)
+					)
+			);
+
+			sessionAlerts.print();
+			troveAlerts.print();
 
 			env.execute("Execute timeout monitoring");
 		}

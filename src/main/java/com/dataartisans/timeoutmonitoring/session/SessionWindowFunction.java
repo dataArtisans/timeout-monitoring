@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.session;
 
+import com.dataartisans.timeoutmonitoring.Function;
+import com.dataartisans.timeoutmonitoring.Function2;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.TypeExtractor;

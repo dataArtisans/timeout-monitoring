@@ -16,39 +16,43 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.alert;
 
+import com.dataartisans.timeoutmonitoring.Function;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.json.JSONObject;
-import scala.Serializable;
 
-public class LatencyWindowFunction implements Function2<JSONObject, JSONObject, JSONObject>, Serializable {
+import java.io.IOException;
+import java.io.ObjectInputStream;
 
-	private final String[] resultFields;
+public class JSONObjectAlertFunction implements Function<Long, JSONObject> {
+	private final String timestampKey;
+	private final String timestampPattern;
+	private transient DateTimeFormatter formatter;
 
-	public LatencyWindowFunction(String[] resultFields) {
-		this.resultFields = resultFields;
+	public JSONObjectAlertFunction(String timestampKey, String timestampPattern) {
+		this.timestampKey = timestampKey;
+		this.timestampPattern = timestampPattern;
+		this.formatter = DateTimeFormat.forPattern(timestampPattern);
 	}
 
 	@Override
-	public JSONObject apply(JSONObject left, JSONObject right) {
+	public JSONObject apply(Long aLong) {
+		JSONObject result = new JSONObject();
 
-		JSONObject result = JSONObjectExtractor.createJSONObject(left, resultFields);
+		DateTime timestamp = new DateTime(aLong);
 
-		String firstTimestamp = left.getString("timestamp");
-		String lastTimestamp = right.getString("timestamp");
+		String timestampValue = formatter.print(timestamp);
 
-		DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
-		DateTime firstDateTime = formatter.parseDateTime(firstTimestamp);
-		DateTime lastDateTime = formatter.parseDateTime(lastTimestamp);
-
-		Duration diff = new Duration(firstDateTime, lastDateTime);
-
-		result.put("latency", diff.getMillis() + "");
+		result.put(timestampKey, timestampValue);
 
 		return result;
+	}
+
+	private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+		ois.defaultReadObject();
+		formatter = DateTimeFormat.forPattern(timestampPattern);
 	}
 }

@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.session;
 
+import com.dataartisans.timeoutmonitoring.Function;
+import com.dataartisans.timeoutmonitoring.JSONObjectExtractor;
 import org.json.JSONObject;
 
 public class LatencyTimeoutFunction implements Function<JSONObject, JSONObject> {
@@ -33,6 +35,7 @@ public class LatencyTimeoutFunction implements Function<JSONObject, JSONObject> 
 	public JSONObject apply(JSONObject jsonObject) {
 		JSONObject result = JSONObjectExtractor.createJSONObject(jsonObject, outputFields);
 
+		result.put("sessionTimeout", "true");
 		result.put("latency", timeout + "");
 
 		return result;

@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.session;
 
+import com.dataartisans.timeoutmonitoring.Function;
 import org.apache.flink.api.common.state.OperatorState;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;

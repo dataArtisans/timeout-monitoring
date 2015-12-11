@@ -19,7 +19,9 @@
 package com.dataartisans.timeoutmonitoring;
 
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicate;
-import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatch;
+import com.dataartisans.timeoutmonitoring.session.SessionTrigger;
+import com.dataartisans.timeoutmonitoring.session.SessionWindowAssigner;
+import com.dataartisans.timeoutmonitoring.session.SessionWindowFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
