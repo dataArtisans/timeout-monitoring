@@ -18,11 +18,13 @@
 
 package com.dataartisans.timeoutmonitoring;
 
+import com.dataartisans.timeoutmonitoring.alert.Alert;
 import com.dataartisans.timeoutmonitoring.alert.AlertWindowOperator;
 import com.dataartisans.timeoutmonitoring.alert.JSONObjectAlertFunction;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateAnd;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchEquals;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchRegex;
+import com.dataartisans.timeoutmonitoring.session.JSONSessionMonitoring;
 import com.dataartisans.timeoutmonitoring.session.LatencyTimeoutFunction;
 import com.dataartisans.timeoutmonitoring.session.LatencyWindowFunction;
 import org.apache.flink.api.common.ExecutionConfig;
@@ -55,7 +57,6 @@ public class TimeoutMonitoring {
 			StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
 			env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-			env.setParallelism(1);
 
 			ExecutionConfig config = env.getConfig();
 
@@ -90,7 +91,7 @@ public class TimeoutMonitoring {
 					new JSONObjectPredicateMatchEquals<>("event_type", "compute.instance.update")),
 				new JSONObjectPredicateMatchEquals<>("event_type", "compute.instance.create.end"), // session end element
 				timestampExtractor,
-				delay,
+				delay,	// maximum delay of events
 				sessionTimeout, // session timeout
 				new LatencyWindowFunction(resultFields), // create the latency from the first and last element of the session
 				new LatencyTimeoutFunction(resultFields, sessionTimeout)
@@ -98,34 +99,45 @@ public class TimeoutMonitoring {
 
 			TypeInformation<JSONObject> jsonObjectTypeInformation = TypeExtractor.getForClass(JSONObject.class);
 
-			DataStream<JSONObject> sessionAlerts = sessionMonitoring.filter(new FilterFunction<JSONObject>() {
+			DataStream<JSONObject> sessionTimeouts = sessionMonitoring.filter(new FilterFunction<JSONObject>() {
 				@Override
 				public boolean filter(JSONObject jsonObject) throws Exception {
-					return jsonObject.has("sessionTimeout");
+					return jsonObject.has("sessionTimeout"); // we only want to keep the session timeouts
 				}
-			}).transform(
-					"SessionAlerts",
-					jsonObjectTypeInformation,
-					new AlertWindowOperator<JSONObject, JSONObject>(
-							5,
-							1000 * 5 * 3600,
-							new JSONObjectAlertFunction("timestamp", timestampPattern)
-					)
-			).setParallelism(1);;
+			});
 
-			DataStream<JSONObject> troveAlerts = jsonObjects.filter(new FilterFunction<JSONObject>() {
+			DataStream<JSONObject> sessionAlerts = Alert.createAlert(
+				sessionTimeouts, // filtered input for session timeouts
+				"SessionAlerts", // name of operator
+				5, // number of trigger events
+				300000, // interval length in which the trigger events have to occur (milliseconds)
+				new JSONObjectAlertFunction(
+					"alert", // alert key
+					"sessionTimeout", // alert value
+					"timestamp", // timestamp key
+					timestampPattern // timestamp pattern to generate
+				),
+				jsonObjectTypeInformation // output type information
+			);
+
+			DataStream<JSONObject> troveEvents = jsonObjects.filter(new FilterFunction<JSONObject>() {
 				@Override
 				public boolean filter(JSONObject jsonObject) throws Exception {
 					return errorPattern.matcher(jsonObject.optString(errorKey)).matches();
 				}
-			}).transform(
-					"TroveAlerts",
-					jsonObjectTypeInformation,
-					new AlertWindowOperator<JSONObject, JSONObject>(
-							5,
-							300000,
-							new JSONObjectAlertFunction("timestamp", timestampPattern)
-					)
+			});
+
+			DataStream<JSONObject> troveAlerts = Alert.createAlert(
+				troveEvents,
+				"TroveAlerts",
+				3,
+				50000,
+				new JSONObjectAlertFunction(
+					"alert",
+					"troveAlert",
+					"timestamp",
+					timestampPattern),
+				jsonObjectTypeInformation
 			);
 
 			sessionAlerts.print();

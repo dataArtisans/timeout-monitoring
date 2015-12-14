@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-package com.dataartisans.timeoutmonitoring;
+package com.dataartisans.timeoutmonitoring.session;
 
+import com.dataartisans.timeoutmonitoring.Function;
+import com.dataartisans.timeoutmonitoring.Function2;
+import com.dataartisans.timeoutmonitoring.JSONObjectExtractor;
+import com.dataartisans.timeoutmonitoring.JSONObjectTimestampExtractor;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicate;
-import com.dataartisans.timeoutmonitoring.session.SessionTrigger;
-import com.dataartisans.timeoutmonitoring.session.SessionWindowAssigner;
-import com.dataartisans.timeoutmonitoring.session.SessionWindowFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -43,7 +44,7 @@ public class JSONSessionMonitoring {
 	 * @param windowFunction Function which is called with the session start and end element
 	 * @return DataStream of JSONObjects which are produced by the windowFunction
 	 */
-	public static DataStream createSessionMonitoring(
+	public static DataStream<JSONObject> createSessionMonitoring(
 		DataStream<JSONObject> input,
 		final String[] inputKeys,
 		final String key,

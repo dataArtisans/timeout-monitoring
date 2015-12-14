@@ -56,10 +56,8 @@ public class AlertWindowOperator<IN, OUT>
 
 	@Override
 	public void processElement(StreamRecord<IN> streamRecord) throws Exception {
-		AlertEvent alertEvent = new AlertEvent(streamRecord.getTimestamp());
-
+		AlertEvent alertEvent = new AlertEvent<>(streamRecord.getTimestamp(), streamRecord.getValue());
 		alertEvents.add(alertEvent);
-
 		generateAlerts(alertEvent);
 	}
 

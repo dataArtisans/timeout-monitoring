@@ -24,6 +24,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
+import org.apache.flink.streaming.api.operators.TimestampedCollector;
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
@@ -84,10 +85,21 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 			}
 		}
 
+		TimestampedCollector<OUT> timestampedCollector;
+
+		if (collector instanceof TimestampedCollector) {
+			timestampedCollector = (TimestampedCollector<OUT>)collector;
+		} else {
+			throw new RuntimeException("The collector must be of type TimestampedCollector " +
+				"in order to set the timestamp correctly.");
+		}
+
 		if (isSessionStart.apply(firstEvent)) {
 			if (!isSessionEnd.apply(lastEvent) || lastTimestamp - firstTimestamp > timeout) {
+				timestampedCollector.setTimestamp(firstTimestamp + timeout);
 				collector.collect(timeoutFunction.apply(firstEvent));
 			} else {
+				timestampedCollector.setTimestamp(lastTimestamp);
 				collector.collect(windowFunction.apply(firstEvent, lastEvent));
 			}
 		} else {

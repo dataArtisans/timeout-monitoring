@@ -28,11 +28,19 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 
 public class JSONObjectAlertFunction implements Function<Long, JSONObject> {
+	private final String alertKey;
+	private final String alertValue;
 	private final String timestampKey;
 	private final String timestampPattern;
 	private transient DateTimeFormatter formatter;
 
-	public JSONObjectAlertFunction(String timestampKey, String timestampPattern) {
+	public JSONObjectAlertFunction(
+		String alertKey,
+		String alertValue,
+		String timestampKey,
+		String timestampPattern) {
+		this.alertKey = alertKey;
+		this.alertValue = alertValue;
 		this.timestampKey = timestampKey;
 		this.timestampPattern = timestampPattern;
 		this.formatter = DateTimeFormat.forPattern(timestampPattern);
@@ -47,6 +55,7 @@ public class JSONObjectAlertFunction implements Function<Long, JSONObject> {
 		String timestampValue = formatter.print(timestamp);
 
 		result.put(timestampKey, timestampValue);
+		result.put(alertKey, alertValue);
 
 		return result;
 	}

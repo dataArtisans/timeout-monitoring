@@ -19,6 +19,7 @@ package com.dataartisans.timeoutmonitoring;
 
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchEquals;
 import com.dataartisans.timeoutmonitoring.predicate.JSONObjectPredicateMatchRegex;
+import com.dataartisans.timeoutmonitoring.session.JSONSessionMonitoring;
 import com.dataartisans.timeoutmonitoring.session.LatencyTimeoutFunction;
 import com.dataartisans.timeoutmonitoring.session.LatencyWindowFunction;
 import org.apache.flink.api.common.ExecutionConfig;

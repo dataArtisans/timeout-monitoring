@@ -63,7 +63,11 @@ public class AlertGenerationTest {
 
 		TypeInformation<JSONObject> outTypeInformation = TypeExtractor.getForClass(JSONObject.class);
 
-		Function<Long, JSONObject> alertFunction = new JSONObjectAlertFunction("timestamp", timestampPattern);
+		Function<Long, JSONObject> alertFunction = new JSONObjectAlertFunction(
+			"alert",
+			"testAlert",
+			"timestamp",
+			timestampPattern);
 
 		@SuppressWarnings("unchecked")
 		DataStream<JSONObject> result = input.transform(

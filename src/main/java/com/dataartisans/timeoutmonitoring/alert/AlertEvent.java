@@ -22,15 +22,17 @@ import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class AlertEvent implements Serializable {
+public class AlertEvent<IN> implements Serializable {
 	private static long serialVersionUID = 1L;
 
 	private long timestamp;
 	private boolean processed;
+	private IN value;
 
-	public AlertEvent(long timestamp) {
+	public AlertEvent(long timestamp, IN value) {
 		this.timestamp = timestamp;
 		this.processed = false;
+		this.value = value;
 	}
 
 	@Override
@@ -47,6 +49,10 @@ public class AlertEvent implements Serializable {
 		} else {
 			return false;
 		}
+	}
+
+	public IN getValue() {
+		return value;
 	}
 
 	public boolean canEqual(AlertEvent event) {
