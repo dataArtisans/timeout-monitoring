@@ -19,15 +19,16 @@
 package com.dataartisans.timeoutmonitoring.session;
 
 import com.dataartisans.timeoutmonitoring.Function;
-import org.apache.flink.api.common.state.OperatorState;
+import org.apache.flink.api.common.state.*;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
+import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SessionTrigger<T> implements Trigger<T, GlobalWindow> {
+public class SessionTrigger<T> extends Trigger<T, GlobalWindow> {
 
-	private enum WindowState {
+	public enum WindowState {
 		EMPTY,
 		START_ELEMENT,
 		END_ELEMENT
@@ -38,6 +39,8 @@ public class SessionTrigger<T> implements Trigger<T, GlobalWindow> {
 	private final Function<T, Boolean> isSessionStart;
 	private final Function<T, Boolean> isSessionEnd;
 	private final long timeout;
+	private final ValueStateDescriptor<WindowState> windowStateDescriptor =
+		new ValueStateDescriptor("windowState", WindowState.class, WindowState.EMPTY);
 
 	public SessionTrigger(
 		Function<T, Boolean> isSessionStart,
@@ -50,7 +53,7 @@ public class SessionTrigger<T> implements Trigger<T, GlobalWindow> {
 
 	@Override
 	public TriggerResult onElement(T record, long timestamp, GlobalWindow globalWindow, TriggerContext triggerContext) throws Exception {
-		OperatorState<WindowState> windowState = triggerContext.getKeyValueState("windowState", WindowState.EMPTY);
+		ValueState<WindowState> windowState = triggerContext.getPartitionedState(windowStateDescriptor);
 
 		if (isSessionStart.apply(record)) {
 			if (windowState.value() == WindowState.EMPTY) {

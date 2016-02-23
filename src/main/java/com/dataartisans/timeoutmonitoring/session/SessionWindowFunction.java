@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 
-public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, OUT, KEY, GlobalWindow>, ResultTypeQueryable<OUT> {
+public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<Iterable<IN>, OUT, KEY, GlobalWindow>, ResultTypeQueryable<OUT> {
 	private static final Logger LOG = LoggerFactory.getLogger(SessionWindowFunction.class);
 
 	private final Function<IN, Boolean> isSessionStart;
@@ -64,6 +64,10 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 	@Override
 	public void apply(KEY key, GlobalWindow globalWindow, Iterable<IN> iterable, Collector<OUT> collector) throws Exception {
 		Iterator<IN> iterator = iterable.iterator();
+
+		if(!iterator.hasNext()){
+			return;
+		}
 
 		IN firstEvent = iterator.next();
 		long firstTimestamp = timestampExtractor.apply(firstEvent);
@@ -112,4 +116,5 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, O
 	public TypeInformation<OUT> getProducedType() {
 		return outTypeInformation;
 	}
+
 }

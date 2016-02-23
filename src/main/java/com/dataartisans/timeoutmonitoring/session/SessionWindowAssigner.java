@@ -24,6 +24,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.assigners.WindowAssigner;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
+import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.GlobalWindow;
 
 import java.util.Collection;
@@ -67,7 +68,7 @@ public class SessionWindowAssigner<T> extends WindowAssigner<T, GlobalWindow> {
 		return new GlobalWindow.Serializer();
 	}
 
-	private static class NeverTrigger<T> implements Trigger<T, GlobalWindow> {
+	private static class NeverTrigger<T> extends Trigger<T, GlobalWindow> {
 
 		@Override
 		public TriggerResult onElement(T t, long l, GlobalWindow globalWindow, TriggerContext triggerContext) throws Exception {

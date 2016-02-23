@@ -21,7 +21,7 @@ package com.dataartisans.timeoutmonitoring.alert;
 import com.dataartisans.timeoutmonitoring.Function;
 import org.apache.flink.api.java.typeutils.runtime.DataInputViewStream;
 import org.apache.flink.core.memory.DataInputView;
-import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.AbstractStateBackend;
 import org.apache.flink.runtime.state.StateHandle;
 import org.apache.flink.shaded.com.google.common.collect.EvictingQueue;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -109,7 +109,7 @@ public class AlertWindowOperator<IN, OUT>
 	public StreamTaskState snapshotOperatorState(long checkpointId, long timestamp) throws Exception {
 		StreamTaskState taskState = super.snapshotOperatorState(checkpointId, timestamp);
 
-		StateBackend.CheckpointStateOutputView out = getStateBackend().createCheckpointStateOutputView(checkpointId, timestamp);
+		AbstractStateBackend.CheckpointStateOutputView out = getStateBackend().createCheckpointStateOutputView(checkpointId, timestamp);
 
 		ObjectOutputStream oos = new ObjectOutputStream(out);
 
