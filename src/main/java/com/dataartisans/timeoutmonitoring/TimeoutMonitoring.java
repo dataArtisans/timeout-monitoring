@@ -58,10 +58,6 @@ public class TimeoutMonitoring {
 
 			env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-			ExecutionConfig config = env.getConfig();
-
-			config.enableTimestamps();
-
 			final String[] inputKeys = {"_context_request_id", "payload:instance_type_id", "timestamp", "event_type", "publisher_id", "_context_user_name", "_context_project_name", "_context_tenant", "_context_project_id"};
 			final String key = "_context_request_id";
 			final String[] resultFields = {"_context_request_id", "timestamp"};

@@ -100,10 +100,10 @@ public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<Itera
 
 		if (isSessionStart.apply(firstEvent)) {
 			if (!isSessionEnd.apply(lastEvent) || lastTimestamp - firstTimestamp > timeout) {
-				timestampedCollector.setTimestamp(firstTimestamp + timeout);
+				timestampedCollector.setAbsoluteTimestamp(firstTimestamp + timeout);
 				collector.collect(timeoutFunction.apply(firstEvent));
 			} else {
-				timestampedCollector.setTimestamp(lastTimestamp);
+				timestampedCollector.setAbsoluteTimestamp(lastTimestamp);
 				collector.collect(windowFunction.apply(firstEvent, lastEvent));
 			}
 		} else {
