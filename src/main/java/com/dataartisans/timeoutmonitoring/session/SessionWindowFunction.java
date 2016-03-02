@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 
-public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<Iterable<IN>, OUT, KEY, GlobalWindow>, ResultTypeQueryable<OUT> {
+public class SessionWindowFunction<IN, OUT, KEY> implements WindowFunction<IN, OUT, KEY, GlobalWindow>, ResultTypeQueryable<OUT> {
 	private static final Logger LOG = LoggerFactory.getLogger(SessionWindowFunction.class);
 
 	private final Function<IN, Boolean> isSessionStart;
